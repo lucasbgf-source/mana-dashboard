@@ -59,6 +59,12 @@ export const getSystemMetrics = async () => {
   return response.data
 }
 
+// NOVO: Métricas de IA
+export const getAIMetrics = async (days = 30) => {
+  const response = await api.get(`/admin/metrics/ai?days=${days}`)
+  return response.data
+}
+
 // Users
 export const getUsers = async (page = 1, limit = 20, status?: string) => {
   const params = new URLSearchParams({ page: String(page), limit: String(limit) })

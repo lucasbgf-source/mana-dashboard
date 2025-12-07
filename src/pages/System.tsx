@@ -7,7 +7,7 @@ export default function System() {
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['systemMetrics'],
     queryFn: getSystemMetrics,
-    refetchInterval: 60000 // Refresh every minute
+    refetchInterval: 60000
   })
 
   if (isLoading) {
@@ -19,8 +19,13 @@ export default function System() {
   }
 
   const database = data?.database || { tables: {}, total_rows: 0 }
-  const ai = data?.ai || { calls_30d: 0, tokens_30d: 0, estimated_cost_usd: 0 }
+  const ai = data?.ai || { calls_30d: 0, tokens_30d: 0, estimated_cost_usd: 0, provider: 'anthropic' }
   const errors = data?.errors || { count_7d: 0, by_type: {} }
+
+  // Detectar provider
+  const isAnthropic = ai.provider === 'anthropic'
+  const providerName = isAnthropic ? 'Claude (Anthropic)' : 'GPT-4 (OpenAI)'
+  const modelName = isAnthropic ? 'claude-3-5-haiku' : 'gpt-4o-mini'
 
   return (
     <div className="space-y-6">
@@ -83,17 +88,26 @@ export default function System() {
         </div>
       </div>
 
-      {/* AI Usage */}
+      {/* AI Usage - ATUALIZADO */}
       <div className="bg-white rounded-xl shadow-sm p-6">
-        <div className="flex items-center gap-2 mb-4">
-          <Cpu className="w-5 h-5 text-gray-500" />
-          <h3 className="text-lg font-semibold text-gray-900">Uso da IA (OpenAI)</h3>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <Cpu className="w-5 h-5 text-gray-500" />
+            <h3 className="text-lg font-semibold text-gray-900">Uso da IA</h3>
+          </div>
+          <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+            isAnthropic ? 'bg-purple-100 text-purple-800' : 'bg-green-100 text-green-800'
+          }`}>
+            🤖 {providerName}
+          </span>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-purple-50 rounded-lg p-4">
-            <p className="text-sm text-purple-600 font-medium">Chamadas</p>
-            <p className="text-3xl font-bold text-purple-900">{ai.calls_30d.toLocaleString()}</p>
-            <p className="text-sm text-purple-600">últimos 30 dias</p>
+          <div className={`${isAnthropic ? 'bg-purple-50' : 'bg-green-50'} rounded-lg p-4`}>
+            <p className={`text-sm ${isAnthropic ? 'text-purple-600' : 'text-green-600'} font-medium`}>Chamadas</p>
+            <p className={`text-3xl font-bold ${isAnthropic ? 'text-purple-900' : 'text-green-900'}`}>
+              {ai.calls_30d.toLocaleString()}
+            </p>
+            <p className={`text-sm ${isAnthropic ? 'text-purple-600' : 'text-green-600'}`}>últimos 30 dias</p>
           </div>
           <div className="bg-blue-50 rounded-lg p-4">
             <p className="text-sm text-blue-600 font-medium">Tokens Consumidos</p>
@@ -103,7 +117,7 @@ export default function System() {
           <div className="bg-green-50 rounded-lg p-4">
             <p className="text-sm text-green-600 font-medium">Custo Estimado</p>
             <p className="text-3xl font-bold text-green-900">${ai.estimated_cost_usd.toFixed(4)}</p>
-            <p className="text-sm text-green-600">gpt-4o-mini pricing</p>
+            <p className="text-sm text-green-600">{modelName} pricing</p>
           </div>
         </div>
       </div>
@@ -150,7 +164,7 @@ export default function System() {
         )}
       </div>
 
-      {/* System Status */}
+      {/* System Status - ATUALIZADO */}
       <div className="bg-white rounded-xl shadow-sm p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Status dos Serviços</h3>
         <div className="space-y-3">
@@ -177,10 +191,10 @@ export default function System() {
           </div>
           <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
             <div className="flex items-center gap-3">
-              <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-              <span className="font-medium">OpenAI API</span>
+              <div className={`w-3 h-3 ${isAnthropic ? 'bg-purple-500' : 'bg-green-500'} rounded-full animate-pulse`}></div>
+              <span className="font-medium">{providerName}</span>
             </div>
-            <span className="text-sm text-green-600">Online</span>
+            <span className={`text-sm ${isAnthropic ? 'text-purple-600' : 'text-green-600'}`}>Online</span>
           </div>
         </div>
       </div>

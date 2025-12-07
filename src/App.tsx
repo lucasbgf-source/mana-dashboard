@@ -6,6 +6,7 @@ import Users from './pages/Users'
 import Entries from './pages/Entries'
 import System from './pages/System'
 import BetaCodes from './pages/BetaCodes'
+import AIMetrics from './pages/AIMetrics'  // NOVO
 import Layout from './components/Layout'
 
 function App() {
@@ -13,10 +14,8 @@ function App() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Check if token exists and is valid
     const token = localStorage.getItem('admin_token')
     if (token) {
-      // Verify token
       fetch(`${import.meta.env.VITE_API_URL || ''}/admin/verify`, {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -78,6 +77,7 @@ function App() {
                   <Route path="/" element={<Dashboard />} />
                   <Route path="/users" element={<Users />} />
                   <Route path="/entries" element={<Entries />} />
+                  <Route path="/ai-metrics" element={<AIMetrics />} />  {/* NOVO */}
                   <Route path="/system" element={<System />} />
                   <Route path="/beta-codes" element={<BetaCodes />} />
                 </Routes>
