@@ -1,4 +1,14 @@
 import { useQuery } from '@tanstack/react-query'
+import { 
+  Brain, 
+  CheckCircle, 
+  Edit3, 
+  XCircle, 
+  TrendingUp, 
+  Sparkles,
+  Target,
+  BookOpen
+} from 'lucide-react'
 import {
   LineChart,
   Line,
@@ -7,22 +17,20 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  BarChart,
-  Bar,
   PieChart,
   Pie,
   Cell
 } from 'recharts'
-import { Brain, CheckCircle, Edit, TrendingUp, Zap, BookOpen } from 'lucide-react'
 import MetricCard from '../components/MetricCard'
 import { getAIMetrics } from '../services/api'
 
-const COLORS = ['#22c55e', '#f59e0b', '#ef4444', '#3b82f6']
+const COLORS = ['#22c55e', '#f97316', '#ef4444', '#3b82f6']
 
 export default function AIMetrics() {
-  const { data, isLoading, refetch } = useQuery({
+  // CORREÇÃO: Passar número diretamente, não objeto
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['aiMetrics'],
-    queryFn: getAIMetrics,
+    queryFn: () => getAIMetrics(30), // Passa 30 como NUMBER
     refetchInterval: 60000
   })
 
@@ -30,6 +38,22 @@ export default function AIMetrics() {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+        <XCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+        <h3 className="text-lg font-semibold text-red-800 mb-2">Erro ao carregar métricas</h3>
+        <p className="text-red-600 mb-4">Não foi possível carregar as métricas de IA.</p>
+        <button 
+          onClick={() => refetch()}
+          className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+        >
+          Tentar novamente
+        </button>
       </div>
     )
   }
@@ -44,236 +68,222 @@ export default function AIMetrics() {
     fixed_rules_used: 0,
     ai_calls: 0,
     by_day: [],
-    top_edits: [],
     provider: 'anthropic'
   }
 
-  const accuracyRate = metrics.accuracy_rate || 0
-  const editRate = metrics.total_classifications > 0 
-    ? ((metrics.edited_before_confirm / metrics.total_classifications) * 100).toFixed(1)
-    : 0
-
-  // Dados para gráfico de pizza
+  // Dados para o gráfico de pizza
   const pieData = [
-    { name: 'Confirmados', value: metrics.confirmed_without_edit },
-    { name: 'Editados', value: metrics.edited_before_confirm },
-    { name: 'Cancelados', value: metrics.cancelled }
+    { name: 'Aceito', value: metrics.confirmed_without_edit, color: '#22c55e' },
+    { name: 'Editado', value: metrics.edited_before_confirm, color: '#f97316' },
+    { name: 'Cancelado', value: metrics.cancelled, color: '#ef4444' }
   ].filter(d => d.value > 0)
 
-  // Dados para gráfico de evolução
-  const evolutionData = (metrics.by_day || []).slice(-14).map((d: any) => ({
-    date: d.date?.slice(5) || '',
-    taxa_acerto: d.accuracy_rate || 0,
-    total: d.total || 0
+  // Dados para o gráfico de linha
+  const lineData = (metrics.by_day || []).slice(-14).map((d: any) => ({
+    date: d.date?.slice(5) || '', // MM-DD
+    total: d.total || 0,
+    accurate: d.accurate || 0,
+    rate: d.total > 0 ? Math.round((d.accurate / d.total) * 100) : 0
   }))
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-semibold text-gray-900">Métricas de IA</h2>
-          <p className="text-sm text-gray-500">
-            Acompanhe a eficiência da classificação automática
-          </p>
-        </div>
         <div className="flex items-center gap-3">
-          <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-            metrics.provider === 'anthropic' 
-              ? 'bg-purple-100 text-purple-800' 
-              : 'bg-green-100 text-green-800'
-          }`}>
-            {metrics.provider === 'anthropic' ? '🤖 Claude (Anthropic)' : '🤖 GPT-4 (OpenAI)'}
-          </span>
-          <button
-            onClick={() => refetch()}
-            className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
-          >
-            Atualizar
-          </button>
+          <Brain className="w-8 h-8 text-purple-600" />
+          <div>
+            <h2 className="text-xl font-semibold text-gray-900">Métricas de IA</h2>
+            <p className="text-sm text-gray-500">
+              Precisão da classificação automática • Provider: {metrics.provider}
+            </p>
+          </div>
         </div>
+        <button
+          onClick={() => refetch()}
+          className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+        >
+          Atualizar
+        </button>
       </div>
 
-      {/* Métricas principais */}
+      {/* Main Metrics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <MetricCard
           title="Taxa de Acerto"
-          value={`${accuracyRate}%`}
-          subtitle="Confirmados sem edição"
-          icon={<CheckCircle className="w-6 h-6" />}
-          color={accuracyRate >= 80 ? 'green' : accuracyRate >= 60 ? 'orange' : 'red'}
+          value={`${metrics.accuracy_rate?.toFixed(1) || 0}%`}
+          subtitle={`${metrics.confirmed_without_edit} aceitos sem edição`}
+          icon={<Target className="w-6 h-6" />}
+          color="green"
         />
         <MetricCard
-          title="Taxa de Edição"
-          value={`${editRate}%`}
-          subtitle="Precisaram de correção"
-          icon={<Edit className="w-6 h-6" />}
-          color="orange"
+          title="Total Classificações"
+          value={metrics.total_classifications || 0}
+          subtitle="Últimos 30 dias"
+          icon={<Brain className="w-6 h-6" />}
+          color="purple"
         />
         <MetricCard
           title="Padrões Aprendidos"
-          value={metrics.patterns_learned}
-          subtitle="Classificações salvas"
+          value={metrics.patterns_learned || 0}
+          subtitle="Regras personalizadas"
           icon={<BookOpen className="w-6 h-6" />}
           color="blue"
         />
         <MetricCard
-          title="Regras Fixas Usadas"
-          value={`${metrics.fixed_rules_used}%`}
-          subtitle="Economia de tokens"
-          icon={<Zap className="w-6 h-6" />}
-          color="purple"
+          title="Chamadas IA"
+          value={metrics.ai_calls || 0}
+          subtitle="Requisições ao modelo"
+          icon={<Sparkles className="w-6 h-6" />}
+          color="orange"
         />
       </div>
 
-      {/* Totais */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white rounded-xl shadow-sm p-4 text-center">
-          <p className="text-3xl font-bold text-gray-900">{metrics.total_classifications}</p>
-          <p className="text-sm text-gray-500">Total Classificações</p>
+      {/* Detailed Stats */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Results Breakdown */}
+        <div className="bg-white rounded-xl shadow-sm p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            Resultado das Classificações
+          </h3>
+          
+          <div className="space-y-4">
+            {/* Accepted without edit */}
+            <div className="flex items-center justify-between p-4 bg-green-50 rounded-lg">
+              <div className="flex items-center gap-3">
+                <CheckCircle className="w-6 h-6 text-green-600" />
+                <div>
+                  <p className="font-medium text-green-900">Aceitos sem edição</p>
+                  <p className="text-sm text-green-600">IA classificou corretamente</p>
+                </div>
+              </div>
+              <span className="text-2xl font-bold text-green-900">
+                {metrics.confirmed_without_edit || 0}
+              </span>
+            </div>
+
+            {/* Edited before confirm */}
+            <div className="flex items-center justify-between p-4 bg-orange-50 rounded-lg">
+              <div className="flex items-center gap-3">
+                <Edit3 className="w-6 h-6 text-orange-600" />
+                <div>
+                  <p className="font-medium text-orange-900">Editados antes de confirmar</p>
+                  <p className="text-sm text-orange-600">Usuário corrigiu a classificação</p>
+                </div>
+              </div>
+              <span className="text-2xl font-bold text-orange-900">
+                {metrics.edited_before_confirm || 0}
+              </span>
+            </div>
+
+            {/* Cancelled */}
+            <div className="flex items-center justify-between p-4 bg-red-50 rounded-lg">
+              <div className="flex items-center gap-3">
+                <XCircle className="w-6 h-6 text-red-600" />
+                <div>
+                  <p className="font-medium text-red-900">Cancelados</p>
+                  <p className="text-sm text-red-600">Usuário rejeitou a sugestão</p>
+                </div>
+              </div>
+              <span className="text-2xl font-bold text-red-900">
+                {metrics.cancelled || 0}
+              </span>
+            </div>
+          </div>
         </div>
-        <div className="bg-white rounded-xl shadow-sm p-4 text-center">
-          <p className="text-3xl font-bold text-green-600">{metrics.confirmed_without_edit}</p>
-          <p className="text-sm text-gray-500">Confirmados ✓</p>
-        </div>
-        <div className="bg-white rounded-xl shadow-sm p-4 text-center">
-          <p className="text-3xl font-bold text-yellow-600">{metrics.edited_before_confirm}</p>
-          <p className="text-sm text-gray-500">Editados ✏️</p>
-        </div>
-        <div className="bg-white rounded-xl shadow-sm p-4 text-center">
-          <p className="text-3xl font-bold text-red-600">{metrics.cancelled}</p>
-          <p className="text-sm text-gray-500">Cancelados ✗</p>
+
+        {/* Pie Chart */}
+        <div className="bg-white rounded-xl shadow-sm p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            Distribuição de Resultados
+          </h3>
+          
+          {pieData.length > 0 ? (
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={pieData}
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={80}
+                    dataKey="value"
+                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  >
+                    {pieData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <div className="h-64 flex items-center justify-center">
+              <div className="text-center text-gray-500">
+                <Brain className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                <p>Ainda não há dados suficientes</p>
+                <p className="text-sm">Faça alguns lançamentos para ver as métricas</p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Gráficos */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Evolução da taxa de acerto */}
-        <div className="bg-white rounded-xl shadow-sm p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">
-            Evolução da Taxa de Acerto
-          </h3>
+      {/* Line Chart - Accuracy over time */}
+      <div className="bg-white rounded-xl shadow-sm p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">
+          Taxa de Acerto (últimos 14 dias)
+        </h3>
+        
+        {lineData.length > 0 ? (
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={evolutionData}>
+              <LineChart data={lineData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                 <XAxis dataKey="date" tick={{ fontSize: 12 }} />
                 <YAxis tick={{ fontSize: 12 }} domain={[0, 100]} unit="%" />
                 <Tooltip 
-                  formatter={(value: number) => [`${value.toFixed(1)}%`, 'Taxa de Acerto']}
+                  formatter={(value: number, name: string) => {
+                    if (name === 'rate') return [`${value}%`, 'Taxa de Acerto']
+                    return [value, name]
+                  }}
                 />
                 <Line
                   type="monotone"
-                  dataKey="taxa_acerto"
+                  dataKey="rate"
                   stroke="#22c55e"
                   strokeWidth={2}
+                  name="Taxa de Acerto"
                   dot={{ fill: '#22c55e' }}
                 />
               </LineChart>
             </ResponsiveContainer>
           </div>
-        </div>
-
-        {/* Distribuição */}
-        <div className="bg-white rounded-xl shadow-sm p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">
-            Distribuição de Resultados
-          </h3>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={pieData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={80}
-                  dataKey="value"
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                >
-                  {pieData.map((_, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      </div>
-
-      {/* Top edições por categoria */}
-      <div className="bg-white rounded-xl shadow-sm p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">
-          Categorias Mais Editadas
-        </h3>
-        <p className="text-sm text-gray-500 mb-4">
-          Essas categorias precisam de mais regras ou ajustes no prompt
-        </p>
-        
-        {(metrics.top_edits || []).length === 0 ? (
-          <div className="text-center py-8">
-            <Brain className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-            <p className="text-gray-500">Nenhuma edição registrada ainda</p>
-          </div>
         ) : (
-          <div className="space-y-3">
-            {(metrics.top_edits || []).map((item: any, index: number) => (
-              <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <span className="text-lg font-bold text-gray-400">#{index + 1}</span>
-                  <div>
-                    <p className="font-medium text-gray-900">
-                      {item.original_category} → {item.edited_category}
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      Editado {item.count}x
-                    </p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-medium">
-                    {((item.count / metrics.total_classifications) * 100).toFixed(1)}%
-                  </span>
-                </div>
-              </div>
-            ))}
+          <div className="h-64 flex items-center justify-center">
+            <div className="text-center text-gray-500">
+              <TrendingUp className="w-12 h-12 mx-auto mb-2 opacity-50" />
+              <p>Ainda não há dados suficientes</p>
+            </div>
           </div>
         )}
       </div>
 
-      {/* Dicas de otimização */}
-      <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
-          <TrendingUp className="w-5 h-5 text-blue-600" />
-          Dicas para Melhorar
-        </h3>
-        <ul className="space-y-2 text-sm text-gray-700">
-          {accuracyRate < 80 && (
-            <li className="flex items-start gap-2">
-              <span className="text-yellow-500">⚠️</span>
-              Taxa de acerto abaixo de 80%. Considere adicionar mais regras fixas para categorias frequentes.
-            </li>
-          )}
-          {metrics.fixed_rules_used < 70 && (
-            <li className="flex items-start gap-2">
-              <span className="text-blue-500">💡</span>
-              Regras fixas estão cobrindo apenas {metrics.fixed_rules_used}% dos casos. Analise os padrões mais comuns para adicionar novas regras.
-            </li>
-          )}
-          {metrics.patterns_learned < 50 && (
-            <li className="flex items-start gap-2">
-              <span className="text-green-500">📚</span>
-              Sistema ainda está aprendendo ({metrics.patterns_learned} padrões). A precisão deve melhorar com o uso.
-            </li>
-          )}
-          {accuracyRate >= 85 && (
-            <li className="flex items-start gap-2">
-              <span className="text-green-500">✅</span>
-              Excelente! Taxa de acerto acima de 85%. O sistema está funcionando bem!
-            </li>
-          )}
-        </ul>
+      {/* Info Card */}
+      <div className="bg-blue-50 border border-blue-200 rounded-xl p-6">
+        <div className="flex items-start gap-4">
+          <Sparkles className="w-6 h-6 text-blue-600 flex-shrink-0 mt-1" />
+          <div>
+            <h4 className="font-semibold text-blue-900 mb-2">Como funcionam as métricas?</h4>
+            <ul className="text-sm text-blue-800 space-y-1">
+              <li><strong>Taxa de Acerto:</strong> % de lançamentos aceitos sem edição do usuário</li>
+              <li><strong>Padrões Aprendidos:</strong> Regras criadas a partir do comportamento do usuário</li>
+              <li><strong>Editados:</strong> Classificações que o usuário precisou corrigir antes de confirmar</li>
+              <li><strong>Cancelados:</strong> Sugestões rejeitadas completamente pelo usuário</li>
+            </ul>
+          </div>
+        </div>
       </div>
     </div>
   )
