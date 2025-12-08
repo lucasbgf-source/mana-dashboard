@@ -9,7 +9,7 @@ import {
   LogOut,
   Menu,
   X,
-  Brain  // NOVO - ícone para IA
+  Brain  // V2.6: Ícone para métricas de IA
 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -22,7 +22,7 @@ const menuItems = [
   { path: '/', label: 'Dashboard', icon: LayoutDashboard },
   { path: '/users', label: 'Usuários', icon: Users },
   { path: '/entries', label: 'Lançamentos', icon: Receipt },
-  { path: '/ai-metrics', label: 'Métricas IA', icon: Brain },  // NOVO
+  { path: '/ai-metrics', label: 'Métricas IA', icon: Brain },  // V2.6: Nova página
   { path: '/system', label: 'Sistema', icon: Server },
   { path: '/beta-codes', label: 'Códigos Beta', icon: Ticket },
 ]
