@@ -39,17 +39,17 @@ export const getOverviewMetrics = async () => {
   return response.data
 }
 
-export const getUsersMetrics = async (days = 30) => {
+export const getUsersMetrics = async (days: number = 30) => {
   const response = await api.get(`/admin/metrics/users?days=${days}`)
   return response.data
 }
 
-export const getCommandsMetrics = async (days = 30) => {
+export const getCommandsMetrics = async (days: number = 30) => {
   const response = await api.get(`/admin/metrics/commands?days=${days}`)
   return response.data
 }
 
-export const getEntriesMetrics = async (days = 30) => {
+export const getEntriesMetrics = async (days: number = 30) => {
   const response = await api.get(`/admin/metrics/entries?days=${days}`)
   return response.data
 }
@@ -59,9 +59,11 @@ export const getSystemMetrics = async () => {
   return response.data
 }
 
-// NOVO: Métricas de IA
-export const getAIMetrics = async (days = 30) => {
-  const response = await api.get(`/admin/metrics/ai?days=${days}`)
+// V2.6: AI Metrics - CORREÇÃO: days deve ser NUMBER, não objeto
+export const getAIMetrics = async (days: number = 30) => {
+  // Garantir que days é um número
+  const daysNum = typeof days === 'number' ? days : 30
+  const response = await api.get(`/admin/metrics/ai?days=${daysNum}`)
   return response.data
 }
 
