@@ -27,10 +27,9 @@ import { getAIMetrics } from '../services/api'
 const COLORS = ['#22c55e', '#f97316', '#ef4444', '#3b82f6']
 
 export default function AIMetrics() {
-  // CORREÇÃO: Passar número diretamente, não objeto
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['aiMetrics'],
-    queryFn: () => getAIMetrics(30), // Passa 30 como NUMBER
+    queryFn: () => getAIMetrics(30),
     refetchInterval: 60000
   })
 
@@ -78,12 +77,14 @@ export default function AIMetrics() {
     { name: 'Cancelado', value: metrics.cancelled, color: '#ef4444' }
   ].filter(d => d.value > 0)
 
-  // Dados para o gráfico de linha
+  // CORREÇÃO: Backend retorna 'confirmed', não 'accurate'
+  // Também usar accuracy_rate do backend se disponível
   const lineData = (metrics.by_day || []).slice(-14).map((d: any) => ({
     date: d.date?.slice(5) || '', // MM-DD
     total: d.total || 0,
-    accurate: d.accurate || 0,
-    rate: d.total > 0 ? Math.round((d.accurate / d.total) * 100) : 0
+    confirmed: d.confirmed || 0,
+    edited: d.edited || 0,
+    rate: d.accuracy_rate || (d.total > 0 ? Math.round(((d.confirmed || 0) / d.total) * 100) : 0)
   }))
 
   return (
@@ -246,6 +247,8 @@ export default function AIMetrics() {
                 <Tooltip 
                   formatter={(value: number, name: string) => {
                     if (name === 'rate') return [`${value}%`, 'Taxa de Acerto']
+                    if (name === 'confirmed') return [value, 'Confirmados']
+                    if (name === 'total') return [value, 'Total']
                     return [value, name]
                   }}
                 />

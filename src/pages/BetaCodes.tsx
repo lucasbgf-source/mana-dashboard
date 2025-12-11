@@ -11,7 +11,8 @@ import {
   Search,
   Filter
 } from 'lucide-react';
-import api from '../services/api';
+// CORREÇÃO: Importar funções específicas ao invés do módulo
+import { getBetaCodes, generateBetaCodes } from '../services/api';
 
 interface BetaCode {
   id: string;
@@ -45,7 +46,8 @@ const BetaCodes: React.FC = () => {
     setLoading(true);
     try {
       const status = filter === 'all' ? undefined : filter;
-      const response = await api.getBetaCodes(page, 50, status);
+      // CORREÇÃO: Chamar função importada diretamente
+      const response = await getBetaCodes(page, 50, status);
       setCodes(response.data || []);
       setPagination(response.pagination);
     } catch (error) {
@@ -63,7 +65,8 @@ const BetaCodes: React.FC = () => {
     if (generating) return;
     setGenerating(true);
     try {
-      await api.generateBetaCodes(generateCount);
+      // CORREÇÃO: Chamar função importada diretamente
+      await generateBetaCodes(generateCount);
       await fetchCodes();
     } catch (error) {
       console.error('Error generating codes:', error);
